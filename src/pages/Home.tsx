@@ -146,12 +146,12 @@ export const Home: React.FC<HomeProps> = ({
                   id="home-additional-file-input"
                 />
 
-                <div className="flex items-center gap-2 sm:gap-3 pt-3 shrink-0 border-t border-white/5">
+                <div className="flex items-stretch gap-2 sm:gap-3 pt-3 shrink-0 border-t border-white/5">
                   <Button
                     variant="secondary"
                     size="md"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 min-h-[44px] md:min-h-[46px] text-xs sm:text-sm md:text-base font-semibold"
+                    className="flex-1 h-11 sm:h-12 min-h-[44px] text-xs sm:text-sm font-semibold px-2.5 sm:px-4 whitespace-nowrap"
                     id="add-more-files-btn"
                   >
                     <FolderPlus className="w-4 h-4 mr-1.5 sm:mr-2 text-brand-400 shrink-0" />
@@ -162,10 +162,10 @@ export const Home: React.FC<HomeProps> = ({
                     variant="primary"
                     size="md"
                     onClick={() => onStartSend(selectedFiles)}
-                    className="flex-1 min-h-[44px] md:min-h-[46px] text-xs sm:text-sm md:text-base font-semibold"
+                    className="flex-1 h-11 sm:h-12 min-h-[44px] text-xs sm:text-sm font-semibold px-2.5 sm:px-4 whitespace-nowrap"
                   >
                     <span>Create Transfer</span>
-                    <ArrowRight className="w-4 h-4 ml-1.5 sm:ml-2 shrink-0" />
+                    <ArrowRight className="w-4 h-4 ml-1.5 sm:mr-2 shrink-0" />
                   </Button>
                 </div>
               </div>
