@@ -20,7 +20,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, roomI
         canvasRef.current,
         joinUrl,
         {
-          width: 240,
+          width: 280,
           margin: 1.5,
           color: {
             dark: '#090a0f',
@@ -28,7 +28,13 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, roomI
           },
         },
         (error) => {
-          if (error) console.error('[QRCode] Error rendering QR code', error);
+          if (error) {
+            console.error('[QRCode] Error rendering QR code', error);
+          } else if (canvasRef.current) {
+            canvasRef.current.style.width = '100%';
+            canvasRef.current.style.height = '100%';
+            canvasRef.current.style.maxWidth = '100%';
+          }
         }
       );
     }
@@ -38,21 +44,24 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, roomI
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bezel-outer rounded-3xl p-1.5 w-full max-w-sm shadow-2xl relative"
+        className="bezel-outer rounded-3xl p-1 sm:p-1.5 w-full max-w-[340px] sm:max-w-sm shadow-2xl relative mx-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bezel-inner rounded-[calc(1.5rem-0.25rem)] p-6 text-center space-y-5">
+        <div className="bezel-inner rounded-[calc(1.5rem-0.25rem)] p-4 sm:p-6 text-center space-y-4 sm:space-y-5">
           <div className="flex items-center justify-center gap-2 text-brand-400">
             <QrIcon className="w-5 h-5" />
             <span className="text-sm font-semibold tracking-wide uppercase">Scan to Connect</span>
           </div>
 
-          <div className="flex justify-center p-3 bg-white rounded-2xl shadow-inner w-fit mx-auto border-4 border-white">
-            <canvas ref={canvasRef} className="rounded-lg" />
+          {/* QR Code Container: strictly centered and responsive */}
+          <div className="w-full flex items-center justify-center py-1">
+            <div className="p-2.5 sm:p-3 bg-white rounded-2xl shadow-inner border-4 border-white w-[200px] sm:w-[230px] aspect-square flex items-center justify-center mx-auto">
+              <canvas ref={canvasRef} className="w-full h-full rounded-lg block !max-w-full" />
+            </div>
           </div>
 
           <div className="space-y-1 text-center">
