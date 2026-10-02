@@ -24,7 +24,18 @@ export class SignalingService {
     
     // In production or when hosted behind reverse proxy
     if (import.meta.env.VITE_WS_URL) {
-      return import.meta.env.VITE_WS_URL;
+      let url = import.meta.env.VITE_WS_URL.trim();
+      if (url.startsWith('https://')) {
+        url = url.replace(/^https:\/\//, 'wss://');
+      } else if (url.startsWith('http://')) {
+        url = url.replace(/^http:\/\//, 'ws://');
+      } else if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        url = `${wsProto}//${url}`;
+      }
+      if (!url.endsWith('/ws')) {
+        url = url.replace(/\/+$/, '') + '/ws';
+      }
+      return url;
     }
 
     // If port is 5173 (Vite dev server), use proxy /ws or direct 3001
