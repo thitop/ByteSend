@@ -76,17 +76,17 @@ export const Home: React.FC<HomeProps> = ({
   }));
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col justify-center space-y-6 md:space-y-8 my-auto px-4 py-2">
+    <div className="w-full max-w-6xl mx-auto flex flex-col justify-center space-y-5 sm:space-y-6 md:space-y-7 my-auto px-2 sm:px-4 py-2 sm:py-4">
       {/* Hero Header */}
-      <div className="text-center space-y-2.5 max-w-3xl mx-auto px-4">
-        <Badge variant="brand" className="mb-1 py-1 px-3 text-xs">
+      <div className="text-center space-y-2 sm:space-y-2.5 max-w-3xl mx-auto px-2 sm:px-4">
+        <Badge variant="brand" className="mb-0.5 sm:mb-1 py-0.5 sm:py-1 px-2.5 sm:px-3 text-xs">
           <Sparkles className="w-3.5 h-3.5 text-brand-400 mr-1.5" />
           WebRTC P2P Technology
         </Badge>
         
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight text-white leading-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] xl:text-[3.25rem] font-extrabold tracking-tight text-white leading-tight">
           <div>Send files directly.</div>
-          <div className="mt-1">
+          <div className="mt-0.5 sm:mt-1">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-emerald-300 to-accent-cyan">
               No upload.
             </span>{' '}
@@ -94,28 +94,28 @@ export const Home: React.FC<HomeProps> = ({
           </div>
         </h1>
 
-        <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto font-normal leading-relaxed">
+        <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-xl mx-auto font-normal leading-relaxed">
           Transfer any size file between devices with an unambiguous 6-character code.
           Direct peer-to-peer connection with end-to-end memory transmission.
         </p>
       </div>
 
       {/* Main Dual Action Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-8 items-stretch w-full">
         {/* Send Section (Col 7) */}
         <div className="lg:col-span-7 flex flex-col">
           <Card
-            className="h-[480px] min-h-[480px] max-h-[480px] overflow-hidden"
-            innerClassName="h-full flex flex-col justify-between min-h-0 overflow-hidden p-5 sm:p-6 md:p-8"
+            className="h-full flex flex-col"
+            innerClassName="h-full flex flex-col justify-between min-h-0 p-4 sm:p-6 md:p-7"
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-white/5 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 md:p-2.5 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20">
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg md:text-xl font-bold text-white leading-tight">Send Files</h2>
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight">Send Files</h2>
                   <p className="text-xs text-gray-400">Select or drop files to generate a transfer room</p>
                 </div>
               </div>
@@ -176,22 +176,22 @@ export const Home: React.FC<HomeProps> = ({
         {/* Receive Section (Col 5) */}
         <div className="lg:col-span-5 flex flex-col">
           <Card
-            className="h-[480px] min-h-[480px] max-h-[480px] overflow-hidden"
-            innerClassName="h-full flex flex-col justify-between min-h-0 overflow-hidden p-5 sm:p-6 md:p-8"
+            className="h-full flex flex-col"
+            innerClassName="h-full flex flex-col justify-between min-h-0 p-4 sm:p-6 md:p-7"
           >
-            <div className="space-y-5">
-              <div className="flex items-center gap-3 pb-4 border-b border-white/5 shrink-0">
-                <div className="p-2.5 rounded-xl bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
-                  <Download className="w-5 h-5" />
+            <div className="space-y-4 sm:space-y-5">
+              <div className="flex items-center gap-3 pb-3 md:pb-4 border-b border-white/5 shrink-0">
+                <div className="p-2 md:p-2.5 rounded-xl bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+                  <Download className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg md:text-xl font-bold text-white leading-tight">Receive Files</h2>
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight">Receive Files</h2>
                   <p className="text-xs text-gray-400">Enter a 6-character room code from the sender</p>
                 </div>
               </div>
 
-              <form onSubmit={handleReceiveSubmit} className="space-y-4">
-                <div className="space-y-2">
+              <form onSubmit={handleReceiveSubmit} className="space-y-3.5 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
                   <label htmlFor="room-code-input" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     Transfer Code
                   </label>
@@ -203,7 +203,7 @@ export const Home: React.FC<HomeProps> = ({
                       value={receiveCode}
                       onChange={handleCodeChange}
                       placeholder="e.g. 8K4P2M"
-                      className="w-full h-14 md:h-16 px-4 bg-surface-subtle/80 border border-white/10 rounded-2xl text-center font-mono text-2xl md:text-3xl font-bold tracking-[0.25em] text-white placeholder:text-gray-600 focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-all uppercase"
+                      className="w-full h-12 sm:h-14 md:h-16 px-4 bg-surface-subtle/80 border border-white/10 rounded-2xl text-center font-mono text-2xl md:text-3xl font-bold tracking-[0.25em] text-white placeholder:text-gray-600 focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-all uppercase"
                       autoComplete="off"
                       spellCheck={false}
                     />
@@ -217,7 +217,7 @@ export const Home: React.FC<HomeProps> = ({
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-[11px] sm:text-xs text-gray-500">
                     6 alphanumeric uppercase characters without O/0 and I/1
                   </p>
                 </div>
@@ -227,16 +227,16 @@ export const Home: React.FC<HomeProps> = ({
                   variant="primary"
                   size="lg"
                   disabled={receiveCode.length !== 6}
-                  className="w-full h-12 md:h-14 min-h-[48px] bg-accent-cyan hover:bg-cyan-400 border-cyan-400/30 text-gray-950 font-bold shadow-glow-cyan text-base"
+                  className="w-full h-11 sm:h-12 md:h-14 min-h-[44px] bg-accent-cyan hover:bg-cyan-400 border-cyan-400/30 text-gray-950 font-bold shadow-glow-cyan text-sm sm:text-base"
                 >
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Connect & Receive
                 </Button>
               </form>
             </div>
 
             {/* Quick Info Box */}
-            <div className="mt-5 p-4 rounded-2xl bg-surface-subtle/40 border border-white/5 space-y-2 shrink-0">
+            <div className="mt-4 sm:mt-5 p-3.5 sm:p-4 rounded-2xl bg-surface-subtle/40 border border-white/5 space-y-1.5 sm:space-y-2 shrink-0">
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
                 <Lock className="w-3.5 h-3.5 text-brand-400" />
                 <span>How ByteSend Works</span>

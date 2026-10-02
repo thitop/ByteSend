@@ -58,9 +58,9 @@ export function App() {
   };
 
   return (
-    <div className="min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden flex flex-col justify-between selection:bg-brand-500/20 selection:text-brand-300">
+    <div className="min-h-[100dvh] flex flex-col justify-between selection:bg-brand-500/20 selection:text-brand-300">
       {/* Floating Navbar */}
-      <header className="shrink-0 pt-4 px-4 max-w-6xl mx-auto w-full">
+      <header className="shrink-0 pt-3 sm:pt-4 px-4 max-w-6xl mx-auto w-full z-10">
         <nav className="bezel-inner rounded-2xl px-5 py-2.5 flex items-center justify-between shadow-xl">
           <div
             onClick={resetToHome}
@@ -98,7 +98,7 @@ export function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 min-h-0 overflow-y-auto lg:overflow-visible">
+      <main className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 w-full">
         {/* Error notification banner */}
         {errorMessage && (
           <div className="w-full max-w-xl mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2">
