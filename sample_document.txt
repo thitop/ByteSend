@@ -1,0 +1,8 @@
+Hello from ByteSend!
+This is a test file to verify direct peer-to-peer WebRTC DataChannel file transfer.
+No servers stored this file.
+Transferred securely between two browser instances via ByteSend.
+=========================================
+Timestamp: 2026-10-02
+Testing: WebRTC DataChannel + Chunking
+=========================================
