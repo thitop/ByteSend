@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useDropCode } from './hooks/useDropCode';
 import { Home } from './pages/Home';
 import { Send } from './pages/Send';
@@ -41,15 +41,24 @@ export function App() {
   } = useDropCode();
 
   const [urlCode, setUrlCode] = useState('');
+  const hasAutoJoinedRef = useRef(false);
 
-  // Check URL query param for instant join (e.g. from QR code scan: ?code=8K4P2M)
+  // Auto-connect and start receiving when scanning QR code (?code=XXXXXX)
   useEffect(() => {
+    if (hasAutoJoinedRef.current) return;
+
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('code');
-    if (codeParam && codeParam.length === 6) {
-      setUrlCode(codeParam.toUpperCase());
+    if (codeParam && codeParam.trim().length === 6) {
+      hasAutoJoinedRef.current = true;
+      const cleanCode = codeParam.trim().toUpperCase();
+      setUrlCode(cleanCode);
+      // Clean query parameter from URL so refresh won't re-trigger after cancel
+      window.history.replaceState({}, '', window.location.pathname);
+      // Automatically join room and receive files immediately
+      startReceiveFlow(cleanCode);
     }
-  }, []);
+  }, [startReceiveFlow]);
 
   const getDeviceIcon = (type: string) => {
     if (type === 'mobile') return <Smartphone className="w-4 h-4 text-brand-400" />;

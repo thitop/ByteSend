@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Send,
   Download,
@@ -28,6 +28,12 @@ export const Home: React.FC<HomeProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [receiveCode, setReceiveCode] = useState(initialCode);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialCode) {
+      setReceiveCode(initialCode.toUpperCase().slice(0, 6));
+    }
+  }, [initialCode]);
 
   const handleFilesChosen = (newFiles: File[]) => {
     setSelectedFiles((prev) => [...prev, ...newFiles]);
