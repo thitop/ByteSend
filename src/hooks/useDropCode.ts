@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signalingService } from '../services/signaling';
+import { signalingService, type ServerWarmupStatus } from '../services/signaling';
 import { webrtcService } from '../services/webrtc';
 import { fileTransferService } from '../services/fileTransfer';
 import { getDeviceInfo } from '../utils/device';
@@ -26,6 +26,7 @@ export function useDropCode() {
   const [localDevice] = useState<DeviceInfo>(getDeviceInfo());
   const [remoteDevice, setRemoteDevice] = useState<DeviceInfo | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [serverStatus, setServerStatus] = useState<ServerWarmupStatus>(signalingService.getWarmupStatus());
   const [transferStatus, setTransferStatus] = useState<TransferStatus>('idle');
   const [files, setFiles] = useState<FileItemState[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
@@ -45,6 +46,17 @@ export function useDropCode() {
   roleRef.current = role;
   const roomIdRef = useRef(roomId);
   roomIdRef.current = roomId;
+
+  // Pre-warm Render backend immediately on app launch and track status
+  useEffect(() => {
+    signalingService.warmUpServer();
+    const unsubscribe = signalingService.subscribeWarmup((status) => {
+      setServerStatus(status);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Initialize transfer service callback
   useEffect(() => {
@@ -301,6 +313,7 @@ export function useDropCode() {
     localDevice,
     remoteDevice,
     connectionState,
+    serverStatus,
     transferStatus,
     files,
     activeFileIndex,

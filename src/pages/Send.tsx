@@ -8,7 +8,8 @@ import { FileList } from '../components/file/FileList';
 import type { ConnectionState } from '../hooks/useDropCode';
 import type { FileItemState } from '../types/transfer';
 import type { DeviceInfo } from '../types/signaling';
-import { XCircle, ArrowLeft } from 'lucide-react';
+import type { ServerWarmupStatus } from '../services/signaling';
+import { XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
 interface SendProps {
   roomId: string | null;
@@ -18,6 +19,7 @@ interface SendProps {
   files: FileItemState[];
   onCancel: () => void;
   isExpired?: boolean;
+  serverStatus?: ServerWarmupStatus;
 }
 
 export const Send: React.FC<SendProps> = ({
@@ -28,8 +30,18 @@ export const Send: React.FC<SendProps> = ({
   files,
   onCancel,
   isExpired = false,
+  serverStatus,
 }) => {
   const [internalExpired, setInternalExpired] = useState(false);
+  const [waitingSeconds, setWaitingSeconds] = useState(0);
+
+  useEffect(() => {
+    if (roomId) return;
+    const interval = setInterval(() => {
+      setWaitingSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [roomId]);
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -67,8 +79,27 @@ export const Send: React.FC<SendProps> = ({
           {roomId ? (
             <RoomCode roomId={roomId} expiresAt={expiresAt} onExpire={handleExpire} />
           ) : (
-            <div className="text-center py-6">
-              <span className="text-sm text-gray-400">Generating secure room code...</span>
+            <div className="text-center py-8 px-4 rounded-2xl bg-surface-subtle/50 border border-white/5 space-y-3">
+              <div className="relative mx-auto w-10 h-10 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-brand-400 animate-spin" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-sm font-semibold text-white block">
+                  {serverStatus === 'waking' || waitingSeconds >= 3
+                    ? 'กำลังปลุกเซิร์ฟเวอร์ (Render Cold Start)...'
+                    : 'Generating secure room code...'}
+                </span>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto leading-relaxed">
+                  {serverStatus === 'waking' || waitingSeconds >= 3
+                    ? `Render backend กำลังบูตระบบจากโหมดประหยัดพลังงาน (~30-50 วินาทีในครั้งแรก) ผ่านไปแล้ว: ${waitingSeconds}s`
+                    : 'Connecting to signaling server and reserving peer session...'}
+                </p>
+              </div>
+              {(serverStatus === 'waking' || waitingSeconds >= 3) && (
+                <div className="w-48 h-1.5 bg-surface-base rounded-full mx-auto overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-brand-500 to-accent-cyan rounded-full animate-pulse w-full" />
+                </div>
+              )}
             </div>
           )}
 

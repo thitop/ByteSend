@@ -24,6 +24,7 @@ export function App() {
     localDevice,
     remoteDevice,
     connectionState,
+    serverStatus,
     transferStatus,
     files,
     activeFileIndex,
@@ -90,9 +91,49 @@ export function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Server Status Indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all duration-300 ${
+                serverStatus === 'ready'
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : serverStatus === 'waking'
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 animate-pulse'
+                  : serverStatus === 'error'
+                  ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                  : 'bg-surface-subtle/80 border-white/5 text-gray-400'
+              }`}
+              title={
+                serverStatus === 'ready'
+                  ? 'Signaling Server Ready'
+                  : serverStatus === 'waking'
+                  ? 'Render backend is booting up from sleep (~30-50s cold start)'
+                  : serverStatus === 'error'
+                  ? 'Server connection error'
+                  : 'Connecting to server...'
+              }
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  serverStatus === 'ready'
+                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'
+                    : serverStatus === 'waking'
+                    ? 'bg-amber-400 animate-ping'
+                    : serverStatus === 'error'
+                    ? 'bg-rose-400'
+                    : 'bg-gray-400 animate-pulse'
+                }`}
+              />
+              <span className="hidden sm:inline">
+                {serverStatus === 'ready' && 'Server Ready'}
+                {serverStatus === 'waking' && 'Waking Server... (~40s)'}
+                {serverStatus === 'error' && 'Server Offline'}
+                {(serverStatus === 'checking' || serverStatus === 'idle') && 'Connecting...'}
+              </span>
+            </div>
+
             {/* Device Identity Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-surface-subtle/80 border border-white/5 text-xs text-gray-300">
+            <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-surface-subtle/80 border border-white/5 text-xs text-gray-300">
               {getDeviceIcon(localDevice.type)}
               <span className="font-medium">{localDevice.name}</span>
             </div>
@@ -142,6 +183,7 @@ export function App() {
             files={files}
             onCancel={resetToHome}
             isExpired={isRoomExpired}
+            serverStatus={serverStatus}
           />
         )}
 

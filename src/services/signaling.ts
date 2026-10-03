@@ -5,6 +5,8 @@ import type {
   DeviceInfo,
 } from '../types/signaling';
 
+export type ServerWarmupStatus = 'idle' | 'checking' | 'waking' | 'ready' | 'error';
+type WarmupCallback = (status: ServerWarmupStatus) => void;
 type SignalingCallback = (msg: ServerSignalingMessage) => void;
 
 export class SignalingService {
@@ -13,7 +15,134 @@ export class SignalingService {
   private pingTimer: number | null = null;
   private isExplicitlyClosed = false;
 
+  private warmupStatus: ServerWarmupStatus = 'idle';
+  private warmupListeners: Set<WarmupCallback> = new Set();
+  private keepAliveTimer: number | null = null;
+  private warmupPromise: Promise<boolean> | null = null;
+
   constructor() {}
+
+  /**
+   * Determine HTTP health check URL for pre-warming backend
+   */
+  public getHealthUrl(): string {
+    const isHttps = window.location.protocol === 'https:';
+    const httpProto = isHttps ? 'https:' : 'http:';
+
+    // In production or when hosted behind reverse proxy
+    if (import.meta.env.VITE_WS_URL) {
+      let url = import.meta.env.VITE_WS_URL.trim();
+      if (url.startsWith('wss://')) {
+        url = url.replace(/^wss:\/\//, 'https://');
+      } else if (url.startsWith('ws://')) {
+        url = url.replace(/^ws:\/\//, 'http://');
+      } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `${httpProto}//${url}`;
+      }
+      url = url.replace(/\/ws\/?$/, '');
+      return `${url.replace(/\/+$/, '')}/health`;
+    }
+
+    // If port is 5173 (Vite dev server), use proxy /ws or direct 3001
+    const host = window.location.hostname || 'localhost';
+    if (window.location.port === '5173') {
+      return `${httpProto}//${host}:3001/health`;
+    }
+
+    // Default to relative /health on same host
+    return `${httpProto}//${window.location.host}/health`;
+  }
+
+  public getWarmupStatus(): ServerWarmupStatus {
+    return this.warmupStatus;
+  }
+
+  public subscribeWarmup(callback: WarmupCallback): () => void {
+    this.warmupListeners.add(callback);
+    callback(this.warmupStatus);
+    return () => this.warmupListeners.delete(callback);
+  }
+
+  private setWarmupStatus(status: ServerWarmupStatus): void {
+    this.warmupStatus = status;
+    this.warmupListeners.forEach((cb) => {
+      try {
+        cb(status);
+      } catch (err) {
+        console.error('[Signaling] Warmup listener error', err);
+      }
+    });
+  }
+
+  /**
+   * Pre-warm Render / Backend server on initial page load
+   */
+  public warmUpServer(): Promise<boolean> {
+    if (this.warmupPromise && this.warmupStatus !== 'error') {
+      return this.warmupPromise;
+    }
+
+    this.setWarmupStatus('checking');
+
+    // If it hasn't responded within 2.5 seconds, it's likely a Cold Start
+    const coldStartTimer = window.setTimeout(() => {
+      if (this.warmupStatus === 'checking') {
+        this.setWarmupStatus('waking');
+      }
+    }, 2500);
+
+    this.warmupPromise = (async () => {
+      try {
+        const url = this.getHealthUrl();
+        console.log('[Signaling] Pre-warming server via:', url);
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+
+        clearTimeout(coldStartTimer);
+        if (res.ok) {
+          console.log('[Signaling] Server is warm and ready');
+          this.setWarmupStatus('ready');
+          this.startKeepAlive();
+          return true;
+        } else {
+          this.setWarmupStatus('error');
+          return false;
+        }
+      } catch (err) {
+        clearTimeout(coldStartTimer);
+        console.warn('[Signaling] Server warm-up ping failed (may still be booting):', err);
+        setTimeout(() => {
+          if (this.warmupStatus !== 'ready') {
+            this.warmupPromise = null;
+            this.warmUpServer();
+          }
+        }, 6000);
+        return false;
+      }
+    })();
+
+    return this.warmupPromise;
+  }
+
+  /**
+   * Periodic keep-alive ping while user has the browser tab open
+   * (every 10 minutes to prevent Render from going to sleep after 15 minutes of inactivity)
+   */
+  private startKeepAlive(): void {
+    if (this.keepAliveTimer) return;
+    this.keepAliveTimer = window.setInterval(async () => {
+      try {
+        const url = this.getHealthUrl();
+        await fetch(url, { method: 'GET', cache: 'no-store' });
+        console.log('[Signaling] Keep-alive ping sent to backend');
+      } catch {
+        // silent fail
+      }
+    }, 10 * 60 * 1000);
+  }
 
   /**
    * Determine optimal WebSocket URL
@@ -65,6 +194,7 @@ export class SignalingService {
 
         socket.onopen = () => {
           console.log('[Signaling] Connected successfully');
+          this.setWarmupStatus('ready');
           this.startHeartbeat();
           resolve();
         };
