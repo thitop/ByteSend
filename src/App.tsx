@@ -5,8 +5,8 @@ import { Send } from './pages/Send';
 import { Receive } from './pages/Receive';
 import { FileTransferCard } from './components/transfer/FileTransferCard';
 import { TransferComplete } from './components/transfer/TransferComplete';
+import byteSendLogo from './img/ByteSend_logo.png';
 import {
-  Share2,
   Laptop,
   Smartphone,
   Tablet,
@@ -76,8 +76,12 @@ export function App() {
             onClick={resetToHome}
             className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-500 to-accent-cyan flex items-center justify-center text-gray-950 font-black shadow-glow-sm group-hover:scale-105 transition-transform">
-              <Share2 className="w-5 h-5 stroke-[2.5]" />
+            <div className="relative group-hover:scale-105 transition-transform shrink-0">
+              <img
+                src={byteSendLogo}
+                alt="ByteSend Logo"
+                className="w-9 h-9 rounded-xl object-cover shadow-glow-sm border border-brand-500/20"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
