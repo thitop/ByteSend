@@ -268,7 +268,3 @@ To transmit files of any size without crashing browser tabs, ByteSend implements
 - **Safe Room Codes**: Character ambiguity is eliminated by removing confusing glyphs (`0` vs `O`, `1` vs `I`).
 
 ---
-
-## License
-
-This project is licensed under the MIT License.
