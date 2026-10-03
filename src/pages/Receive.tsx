@@ -1,10 +1,7 @@
 import React from 'react';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { ConnectionStatus } from '../components/room/ConnectionStatus';
+import { Loader2, X } from 'lucide-react';
 import type { ConnectionState } from '../hooks/useDropCode';
 import type { DeviceInfo } from '../types/signaling';
-import { ArrowLeft, XCircle, Loader2 } from 'lucide-react';
 
 interface ReceiveProps {
   roomId: string | null;
@@ -19,55 +16,94 @@ export const Receive: React.FC<ReceiveProps> = ({
   remoteDevice,
   onCancel,
 }) => {
+  const isConnected = connectionState === 'webrtc_connected';
+  const isConnecting = connectionState === 'webrtc_connecting';
+
+  let statusTitle = 'CONNECTING TO SENDER...';
+  let pulseDotClass = 'w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping';
+
+  if (isConnected) {
+    statusTitle = remoteDevice ? `PAIRED WITH ${remoteDevice.name.toUpperCase()}` : 'CONNECTED • STREAMING VIA WEBRTC';
+    pulseDotClass = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+  } else if (isConnecting) {
+    statusTitle = 'NEGOTIATING STUN CANDIDATES...';
+    pulseDotClass = 'w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse';
+  }
+
+  const formattedCode = roomId
+    ? `${roomId.slice(0, 3)}-${roomId.slice(3)}`
+    : '------';
+
   return (
-    <div className="w-full max-w-md mx-auto space-y-6 py-6 px-4">
-      <button
-        onClick={onCancel}
-        className="inline-flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-gray-200 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Cancel Receive
-      </button>
-
-      <Card>
-        <div className="space-y-6 text-center">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-white">Connecting to Sender</h2>
-            <p className="text-xs text-gray-400">
-              Establishing direct peer-to-peer data channel
-            </p>
-          </div>
-
-          {roomId && (
-            <div className="p-4 rounded-2xl bg-surface-subtle border border-white/10 font-mono text-3xl font-bold tracking-[0.25em] text-accent-cyan">
-              {roomId}
-            </div>
-          )}
-
-          <ConnectionStatus
-            state={connectionState}
-            remoteDevice={remoteDevice}
-            role="receiver"
-          />
-
-          <div className="p-4 rounded-2xl bg-surface-subtle/40 border border-white/5 text-xs text-gray-400 leading-relaxed text-left flex items-start gap-2.5">
-            <Loader2 className="w-4 h-4 text-accent-cyan animate-spin shrink-0 mt-0.5" />
-            <span>
-              Negotiating STUN candidates and WebRTC DataChannel. Once connected, file transfer will start automatically.
+    <div className="max-w-xl mx-auto w-full py-4 px-2 sm:px-0">
+      <div className="pro-card rounded-xl p-6 sm:p-7 shadow-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-surface-border">
+          <div className="flex items-center gap-2.5">
+            <div className={pulseDotClass} />
+            <span className="text-xs font-mono font-semibold text-slate-200">
+              {statusTitle}
             </span>
           </div>
-
-          <Button
-            variant="outline"
-            size="md"
-            onClick={onCancel}
-            className="w-full text-rose-400 hover:text-rose-300 hover:border-rose-500/30"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Cancel Connection
-          </Button>
+          <span className="text-[11px] font-mono text-slate-400 bg-surface-subtle px-2 py-0.5 rounded border border-surface-border">
+            Receiver Link
+          </span>
         </div>
-      </Card>
+
+        {/* Code Block */}
+        <div className="my-6 text-center">
+          <div className="text-[11px] font-mono text-slate-400 uppercase tracking-widest mb-2">
+            Target Room
+          </div>
+          <div className="text-4xl sm:text-5xl font-mono font-bold tracking-wider text-white inline-block bg-surface-base px-6 py-3 rounded-lg border border-surface-border">
+            {formattedCode}
+          </div>
+          <p className="text-xs text-slate-400 mt-3 max-w-sm mx-auto leading-relaxed">
+            {remoteDevice
+              ? `Connected to ${remoteDevice.name} (${remoteDevice.type}). Establishing end-to-end data pipe...`
+              : 'Direct peer-to-peer WebRTC DataChannel connection initializing...'}
+          </p>
+        </div>
+
+        {/* Streaming Progress Box */}
+        <div className="p-4 rounded-lg bg-surface-subtle/70 border border-surface-border mb-5">
+          <div className="flex items-center justify-between text-xs mb-2">
+            <span className="text-slate-300 font-medium flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+              <span>SCTP over DTLS Handshake in progress...</span>
+            </span>
+            <span className="font-mono text-sky-400 font-semibold">0%</span>
+          </div>
+          <div className="w-full h-2 bg-surface-base rounded-full overflow-hidden border border-surface-border">
+            <div className="h-full bg-sky-500 rounded-full animate-pulse w-1/4" />
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-3 text-center text-[11px] font-mono">
+            <div className="p-1.5 rounded bg-surface-base border border-surface-border">
+              <span className="block text-slate-500 text-[10px]">SECURITY</span>
+              <span className="text-slate-300 font-medium">DTLS 1.3 / AES-256</span>
+            </div>
+            <div className="p-1.5 rounded bg-surface-base border border-surface-border">
+              <span className="block text-slate-500 text-[10px]">STORAGE</span>
+              <span className="text-slate-300 font-medium">Memory Stream (0 Cloud)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="pt-3 border-t border-surface-border flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs text-slate-400 hover:text-red-400 flex items-center gap-1.5 transition"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Cancel Connection</span>
+          </button>
+          <span className="text-[11px] font-mono text-slate-500">
+            RFC 8831 WebRTC DataChannel
+          </span>
+        </div>
+      </div>
     </div>
   );
 };

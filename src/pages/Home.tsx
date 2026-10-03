@@ -1,18 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send,
+  Upload,
   Download,
-  ArrowRight,
-  Sparkles,
-  Lock,
   FolderPlus,
+  File as FileIcon,
+  X,
+  Radio,
+  ArrowDownToLine,
+  Check,
 } from 'lucide-react';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { FileDropzone } from '../components/file/FileDropzone';
-import { FileList } from '../components/file/FileList';
-import type { FileItemState } from '../types/transfer';
+import { formatBytes } from '../utils/format';
+import { useToast } from '../context/ToastContext';
 
 interface HomeProps {
   onStartSend: (files: File[]) => void;
@@ -25,236 +23,395 @@ export const Home: React.FC<HomeProps> = ({
   onStartReceive,
   initialCode = '',
 }) => {
+  const { showToast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [receiveCode, setReceiveCode] = useState(initialCode);
+  const [isDragging, setIsDragging] = useState(false);
+  const [codeChars, setCodeChars] = useState<string[]>(['', '', '', '', '', '']);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Initialize code chars if initialCode provided
   useEffect(() => {
     if (initialCode) {
-      setReceiveCode(initialCode.toUpperCase().slice(0, 6));
+      const clean = initialCode.toUpperCase().replace(/[^2-9A-HJ-NP-Z]/g, '').slice(0, 6);
+      const chars = clean.split('');
+      setCodeChars([
+        chars[0] || '',
+        chars[1] || '',
+        chars[2] || '',
+        chars[3] || '',
+        chars[4] || '',
+        chars[5] || '',
+      ]);
     }
   }, [initialCode]);
 
-  const handleFilesChosen = (newFiles: File[]) => {
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
+  const addFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    setSelectedFiles((prev) => [...prev, ...files]);
+    showToast(`Staged ${files.length} file(s) for transfer`, 'info');
   };
 
-  const handleAdditionalFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
-      e.target.value = '';
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files));
     }
   };
 
-  const handleClearFiles = () => {
-    setSelectedFiles([]);
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addFiles(Array.from(e.target.files));
+      e.target.value = '';
+    }
   };
 
   const handleRemoveFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow alphanumeric characters, uppercase, max length 6
-    const clean = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
-    setReceiveCode(clean);
+  const handleClearAll = () => {
+    setSelectedFiles([]);
   };
 
-  const handleReceiveSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (receiveCode.length === 6) {
-      onStartReceive(receiveCode);
+  const totalFileSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+
+  // Segmented Code Inputs Handler
+  const handleCharInput = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value.toUpperCase();
+    // Allow unambiguous dictionary
+    const sanitized = rawVal.replace(/[^2-9A-HJ-NP-Z]/g, '');
+
+    if (sanitized.length > 1) {
+      // Handles pasting or typing multi-chars
+      fillChars(sanitized);
+      return;
+    }
+
+    const nextChars = [...codeChars];
+    nextChars[index] = sanitized;
+    setCodeChars(nextChars);
+
+    if (sanitized && index < 5) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
-  const fileItemStates: FileItemState[] = selectedFiles.map((file, idx) => ({
-    meta: {
-      id: `f-${idx}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      totalChunks: Math.ceil(file.size / 65536),
-    },
-    status: 'pending',
-    progress: 0,
-    transferredBytes: 0,
-  }));
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !codeChars[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const fillChars = (str: string) => {
+    const clean = str.toUpperCase().replace(/[^2-9A-HJ-NP-Z]/g, '').slice(0, 6);
+    const updated = ['', '', '', '', '', ''];
+    for (let i = 0; i < 6; i++) {
+      updated[i] = clean[i] || '';
+    }
+    setCodeChars(updated);
+
+    const targetIndex = Math.min(clean.length, 5);
+    inputRefs.current[targetIndex]?.focus();
+  };
+
+  const handlePasteCode = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          fillChars(text);
+          showToast('Pasted room code from clipboard', 'info');
+          return;
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    const promptVal = prompt('Paste 6-character room code:');
+    if (promptVal) {
+      fillChars(promptVal);
+    }
+  };
+
+  const fullCode = codeChars.join('');
+
+  const handleStartSend = () => {
+    if (selectedFiles.length === 0) {
+      showToast('Stage at least one file before generating a code', 'error');
+      return;
+    }
+    onStartSend(selectedFiles);
+  };
+
+  const handleStartReceive = () => {
+    if (fullCode.length < 6) {
+      showToast('Please enter a complete 6-character room code', 'error');
+      return;
+    }
+    onStartReceive(fullCode);
+  };
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col justify-center space-y-5 sm:space-y-6 md:space-y-7 my-auto px-2 sm:px-4 py-2 sm:py-4">
-      {/* Hero Header */}
-      <div className="text-center space-y-2 sm:space-y-2.5 max-w-3xl mx-auto px-2 sm:px-4">
-        <Badge variant="brand" className="mb-0.5 sm:mb-1 py-0.5 sm:py-1 px-2.5 sm:px-3 text-xs">
-          <Sparkles className="w-3.5 h-3.5 text-brand-400 mr-1.5" />
-          WebRTC P2P Technology
-        </Badge>
-        
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] xl:text-[3.25rem] font-extrabold tracking-tight text-white leading-tight">
-          <div>Send files directly.</div>
-          <div className="mt-0.5 sm:mt-1">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-emerald-300 to-accent-cyan">
-              No upload.
-            </span>{' '}
-            <span>No cloud.</span>
-          </div>
+    <div className="w-full flex-1 flex flex-col justify-center">
+      {/* Hero Title & Credibility Statement */}
+      <div className="max-w-2xl mx-auto text-center mb-10">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
+          Send files directly. <br />
+          <span className="text-slate-300">No upload. No cloud.</span>
         </h1>
-
-        <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-xl mx-auto font-normal leading-relaxed">
-          Transfer any size file between devices with an unambiguous 6-character code.
-          Direct peer-to-peer connection with end-to-end memory transmission.
+        <p className="text-sm text-slate-400 leading-relaxed font-normal">
+          Exchange files of any size directly between browsers using an unambiguous 6-character room code. 
+          Zero intermediary storage. Data streams strictly from device RAM to device storage.
         </p>
       </div>
 
-      {/* Main Dual Action Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 lg:gap-8 items-stretch w-full">
-        {/* Send Section (Col 7) */}
-        <div className="lg:col-span-7 flex flex-col">
-          <Card
-            className="h-full flex flex-col"
-            innerClassName="h-full flex flex-col justify-between min-h-0 p-4 sm:p-6 md:p-7"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-white/5 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 md:p-2.5 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20">
-                  <Send className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight">Send Files</h2>
-                  <p className="text-xs text-gray-400">Select or drop files to generate a transfer room</p>
-                </div>
+      {/* MAIN WORKSPACE: SEND & RECEIVE DUAL PANELS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full items-start">
+        
+        {/* ==================== LEFT: SEND FILES ==================== */}
+        <section className="pro-card rounded-xl p-5 sm:p-6 flex flex-col justify-between md:h-[480px]">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-surface-border shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+                <Upload className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Send Files</h2>
+                <p className="text-xs text-slate-400">Stage files for direct peer stream</p>
               </div>
             </div>
+            <span className="text-[11px] font-mono text-slate-400 bg-surface-subtle px-2 py-0.5 rounded border border-surface-border">
+              Sender
+            </span>
+          </div>
 
-            {/* Content area: Dropzone or FileList */}
+          {/* Middle Body */}
+          <div className="flex-1 min-h-0 flex flex-col my-3 overflow-hidden">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={handleFileInputChange}
+            />
+
             {selectedFiles.length === 0 ? (
-              <div className="flex-1 min-h-0 flex flex-col justify-center py-2">
-                <FileDropzone onFilesSelected={handleFilesChosen} />
+              /* Full-size Drag & Drop Box when empty */
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex-1 min-h-0 border border-dashed rounded-lg p-6 text-center cursor-pointer transition flex flex-col items-center justify-center ${
+                  isDragging
+                    ? 'border-sky-500 bg-surface-subtle/80'
+                    : 'border-slate-700 hover:border-sky-500/80 bg-surface-subtle/40 hover:bg-surface-subtle/80'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-surface-base border border-surface-border flex items-center justify-center text-slate-400 mb-2.5">
+                  <FolderPlus className="w-5 h-5 text-sky-400" />
+                </div>
+                <p className="text-xs font-medium text-slate-200 mb-1">
+                  Click to select files, or drag them here
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Any file type • No size limits • Streams in memory
+                </p>
               </div>
             ) : (
-              <div className="flex-1 min-h-0 flex flex-col justify-between gap-3 py-2 overflow-hidden">
-                <FileList
-                  files={fileItemStates}
-                  onClear={handleClearFiles}
-                  onRemoveFile={handleRemoveFile}
-                  title="Selected Files"
-                  className="flex-1 min-h-0 overflow-hidden"
-                  listClassName="flex-1 min-h-0 overflow-y-auto max-h-[220px]"
-                />
+              /* Compact Drop Strip + Scrollable File List */
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Compact Add More Strip */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`shrink-0 border border-dashed rounded-lg p-2.5 text-center cursor-pointer transition flex items-center justify-center gap-2 mb-2.5 ${
+                    isDragging
+                      ? 'border-sky-500 bg-surface-subtle/80'
+                      : 'border-slate-700 hover:border-sky-500/80 bg-surface-subtle/40 hover:bg-surface-subtle/80'
+                  }`}
+                >
+                  <FolderPlus className="w-4 h-4 text-sky-400 shrink-0" />
+                  <span className="text-xs font-medium text-slate-300">
+                    Click or drag to add more files
+                  </span>
+                </div>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  onChange={handleAdditionalFiles}
-                  className="hidden"
-                  id="home-additional-file-input"
-                />
+                {/* Staged List Header */}
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5 px-1 shrink-0">
+                  <span>
+                    Staged (<strong className="text-slate-200 font-semibold font-mono">{selectedFiles.length}</strong>)
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-slate-300">{formatBytes(totalFileSize)}</span>
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="text-slate-400 hover:text-red-400 text-[11px] transition"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
 
-                <div className="flex items-stretch gap-2 sm:gap-3 pt-3 shrink-0 border-t border-white/5">
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 h-11 sm:h-12 min-h-[44px] text-xs sm:text-sm font-semibold px-2.5 sm:px-4 whitespace-nowrap"
-                    id="add-more-files-btn"
-                  >
-                    <FolderPlus className="w-4 h-4 mr-1.5 sm:mr-2 text-brand-400 shrink-0" />
-                    <span>Add More Files</span>
-                  </Button>
-
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => onStartSend(selectedFiles)}
-                    className="flex-1 h-11 sm:h-12 min-h-[44px] text-xs sm:text-sm font-semibold px-2.5 sm:px-4 whitespace-nowrap"
-                  >
-                    <span>Create Transfer</span>
-                    <ArrowRight className="w-4 h-4 ml-1.5 sm:mr-2 shrink-0" />
-                  </Button>
+                {/* Staged List Items (Scrollable) */}
+                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                  {selectedFiles.map((f, idx) => (
+                    <div
+                      key={`${f.name}-${idx}`}
+                      className="flex items-center justify-between p-2 rounded bg-surface-base border border-surface-border text-xs"
+                    >
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <FileIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate text-slate-200 font-medium">{f.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-mono text-slate-400">{formatBytes(f.size)}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFile(idx);
+                          }}
+                          className="text-slate-500 hover:text-red-400 p-0.5 transition"
+                          title="Remove file"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-          </Card>
-        </div>
+          </div>
 
-        {/* Receive Section (Col 5) */}
-        <div className="lg:col-span-5 flex flex-col">
-          <Card
-            className="h-full flex flex-col"
-            innerClassName="h-full flex flex-col justify-between min-h-0 p-4 sm:p-6 md:p-7"
-          >
-            <div className="space-y-4 sm:space-y-5">
-              <div className="flex items-center gap-3 pb-3 md:pb-4 border-b border-white/5 shrink-0">
-                <div className="p-2 md:p-2.5 rounded-xl bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
-                  <Download className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-white leading-tight">Receive Files</h2>
-                  <p className="text-xs text-gray-400">Enter a 6-character room code from the sender</p>
-                </div>
+          {/* Action Button */}
+          <div className="pt-3 border-t border-surface-border shrink-0">
+            <button
+              onClick={handleStartSend}
+              disabled={selectedFiles.length === 0}
+              className="w-full py-2.5 px-4 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Generate Transfer Code</span>
+            </button>
+          </div>
+        </section>
+
+        {/* ==================== RIGHT: RECEIVE FILES ==================== */}
+        <section className="pro-card rounded-xl p-5 sm:p-6 flex flex-col justify-between md:h-[480px]">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-surface-border shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <Download className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">Receive Files</h2>
+                <p className="text-xs text-slate-400">Join room via unambiguous 6-character code</p>
+              </div>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400 bg-surface-subtle px-2 py-0.5 rounded border border-surface-border">
+              Receiver
+            </span>
+          </div>
+
+          {/* Middle Body */}
+          <div className="flex-1 min-h-0 flex flex-col justify-between my-3">
+            <div className="p-4 rounded-lg bg-surface-subtle/50 border border-surface-border">
+              <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-2">
+                Room Code
+              </label>
+
+              {/* 6-character Segmented Clean Input Boxes */}
+              <div className="flex items-center justify-between gap-1.5 sm:gap-2 mb-2">
+                {[0, 1, 2].map((idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => (inputRefs.current[idx] = el)}
+                    type="text"
+                    maxLength={1}
+                    value={codeChars[idx]}
+                    onChange={(e) => handleCharInput(idx, e)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    placeholder="·"
+                    className="code-input-char w-10 h-12 sm:w-11 sm:h-12 text-center text-lg font-mono font-bold uppercase rounded-md bg-surface-base border border-surface-border text-white transition-all"
+                  />
+                ))}
+                <span className="text-slate-600 font-bold select-none">-</span>
+                {[3, 4, 5].map((idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => (inputRefs.current[idx] = el)}
+                    type="text"
+                    maxLength={1}
+                    value={codeChars[idx]}
+                    onChange={(e) => handleCharInput(idx, e)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    placeholder="·"
+                    className="code-input-char w-10 h-12 sm:w-11 sm:h-12 text-center text-lg font-mono font-bold uppercase rounded-md bg-surface-base border border-surface-border text-white transition-all"
+                  />
+                ))}
               </div>
 
-              <form onSubmit={handleReceiveSubmit} className="space-y-3.5 sm:space-y-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <label htmlFor="room-code-input" className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Transfer Code
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="room-code-input"
-                      type="text"
-                      maxLength={6}
-                      value={receiveCode}
-                      onChange={handleCodeChange}
-                      placeholder="e.g. 8K4P2M"
-                      className="w-full h-12 sm:h-14 md:h-16 px-4 bg-surface-subtle/80 border border-white/10 rounded-2xl text-center font-mono text-2xl md:text-3xl font-bold tracking-[0.25em] text-white placeholder:text-gray-600 focus:outline-none focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-all uppercase"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    {receiveCode && (
-                      <button
-                        type="button"
-                        onClick={() => setReceiveCode('')}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-200"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-gray-500">
-                    6 alphanumeric uppercase characters without O/0 and I/1
-                  </p>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  disabled={receiveCode.length !== 6}
-                  className="w-full h-11 sm:h-12 md:h-14 min-h-[44px] bg-accent-cyan hover:bg-cyan-400 border-cyan-400/30 text-gray-950 font-bold shadow-glow-cyan text-sm sm:text-base"
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono mt-2">
+                <span>Dictionary excludes ambiguous 0/O, 1/I</span>
+                <button
+                  type="button"
+                  onClick={handlePasteCode}
+                  className="text-sky-400 hover:text-sky-300 font-sans hover:underline"
                 >
-                  <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Connect & Receive
-                </Button>
-              </form>
-            </div>
-
-            {/* Quick Info Box */}
-            <div className="mt-4 sm:mt-5 p-3.5 sm:p-4 rounded-2xl bg-surface-subtle/40 border border-white/5 space-y-1.5 sm:space-y-2 shrink-0">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
-                <Lock className="w-3.5 h-3.5 text-brand-400" />
-                <span>How ByteSend Works</span>
+                  Paste Code
+                </button>
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Both devices connect directly through your browser. Files stream straight from sender RAM/Disk to receiver storage.
-              </p>
             </div>
-          </Card>
-        </div>
-      </div>
 
+            <div className="space-y-2 text-xs text-slate-400 mt-3">
+              <div className="flex items-start gap-2">
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Direct connection established without file staging on cloud.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span>High speed local LAN fallback if peers share the same Wi-Fi.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="pt-3 border-t border-surface-border shrink-0">
+            <button
+              onClick={handleStartReceive}
+              disabled={fullCode.length < 6}
+              className="w-full py-2.5 px-4 rounded-lg bg-surface-subtle hover:bg-slate-800 border border-surface-border text-white font-medium text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ArrowDownToLine className="w-3.5 h-3.5 text-sky-400" />
+              <span>Connect & Download</span>
+            </button>
+          </div>
+        </section>
+
+      </div>
     </div>
   );
 };

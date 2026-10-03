@@ -9,48 +9,43 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background-color: #090a0f;
-  background-image: 
-    radial-gradient(at 15% 15%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
-    radial-gradient(at 85% 85%, rgba(6, 182, 212, 0.04) 0px, transparent 50%);
-  background-attachment: fixed;
+  background-color: #080C14;
+  color: #E2E8F0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom sleek scrollbar */
+/* Minimal reliable scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0f;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2230;
-  border-radius: 9999px;
+  background: #1F293D;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a3045;
+  background: #334155;
 }
 
-.custom-scrollbar {
-  scrollbar-gutter: stable;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+/* Professional clean cards */
+.pro-card {
+  background: #0E1424;
+  border: 1px solid #1C273C;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
 
-/* Glass & Doppelrand container utilities */
-.bezel-outer {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+.pro-card:hover {
+  border-color: #273652;
 }
 
-.bezel-inner {
-  background: rgba(18, 20, 28, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.06);
+.code-input-char:focus {
+  outline: none;
+  border-color: #0EA5E9;
+  background-color: #131E35;
+  box-shadow: 0 0 0 1px #0EA5E9;
 }
